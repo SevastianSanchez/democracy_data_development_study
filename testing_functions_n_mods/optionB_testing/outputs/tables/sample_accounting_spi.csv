@@ -1,0 +1,9 @@
+"group","n"
+"Countries with SPI Pillar 2 scores",190
+"  not in V-Dem (mostly small states), so no episode data",19
+"  in V-Dem",171
+"    used in the test (treated or clean control)",143
+"      of which treated (clean onset 2018-2021)",22
+"    not used: onset in 2016-2017 or 2022+ (outside usable cohorts)",11
+"    not used: in an episode that began before 2016 (ongoing backsliders)",17
+"    not used: other (not clean in any window)",0

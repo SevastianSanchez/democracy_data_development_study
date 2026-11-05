@@ -1,0 +1,26 @@
+"outcome","pre_years","n_treated","leads_tested","wald_chi2","df","p_value"
+"SCI overall",4,35,"-4,-3,-2",1.59,3,0.662
+"SPI overall",2,22,"-2",2.2,1,0.138
+"Pillar 1: Data use",2,22,"-2",1.38,1,0.24
+"Pillar 2: Data services (dissemination)",2,22,"-2",2.31,1,0.128
+"Pillar 3: Data products",2,22,"-2",0.4,1,0.526
+"Pillar 4: Data sources",2,22,"-2",0.82,1,0.366
+"Pillar 5: Data infrastructure",2,22,"-2",0.62,1,0.429
+"Pillar 2: Data services, 2017+",2,15,"-2",0.77,1,0.382
+"Pillar 5: Data infrastructure, 2017+",2,15,"-2",0.28,1,0.598
+"2.1 Data releases (IMF standards)",2,22,"-2",1.14,1,0.287
+"2.2 Online access (ODIN openness)",2,22,"-2",0.06,1,0.811
+"2.4 Data access services (microdata portal)",2,22,"-2",0.5,1,0.481
+"SCI: Periodicity & timeliness",4,35,"-4,-3,-2",8.17,3,0.043
+"SCI: Methodology",4,35,"-4,-3,-2",0.5,3,0.919
+"SCI: Source data",4,35,"-4,-3,-2",5.36,3,0.147
+"HRV transparency index (v1)",4,25,"-4,-3,-2",2.68,3,0.444
+"HRV2 transparency index, full sample",4,38,"-4,-3,-2",0.5,3,0.918
+"HRV2, onsets 1994-2007",4,31,"-4,-3,-2",0.37,3,0.947
+"HRV2, onsets 2008-2012",4,12,"-4,-3,-2",2.16,3,0.539
+"HRV2, original 125 countries, onsets 1994-2007",4,25,"-4,-3,-2",0.29,3,0.961
+"Pillar 1: Data use",3,15,"-3,-2",1.51,2,0.47
+"Pillar 2: Data services (dissemination)",3,15,"-3,-2",4.36,2,0.113
+"Pillar 3: Data products",3,15,"-3,-2",0.5,2,0.779
+"Pillar 4: Data sources",3,15,"-3,-2",2.32,2,0.314
+"Pillar 5: Data infrastructure",3,15,"-3,-2",0.34,2,0.843

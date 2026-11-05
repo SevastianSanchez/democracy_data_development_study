@@ -1,0 +1,3 @@
+"period","n_onsets","mean_change_year1","mean_change_year3","median_episode_years","share_short_episodes_le2yrs","share_long_episodes_ge10yrs","median_yearly_decline"
+"Onsets 1994-2007",37,-0.09,-0.104,4,0.3,0.19,-0.043
+"Onsets 2008-2012",15,-0.11,-0.072,6,0.33,0.33,-0.03
