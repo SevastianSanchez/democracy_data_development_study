@@ -202,3 +202,45 @@ if (requireNamespace("did", quietly = TRUE)) {
 } else {
   message("`did` not installed: skipped Callaway & Sant'Anna check.")
 }
+
+# =====================================================================
+# PART C: SPI Pillar 2 (data services) vs Pillar 5 (data infrastructure)
+# ---------------------------------------------------------------------
+# Mechanism test: if erosion works through dissemination, Pillar 2 should
+# fall after onset while Pillar 5 should not.
+# Data: World Bank SPI_index.csv (github.com/worldbank/SPI, 03_output_data),
+# saved here as SPI_index_worldbank_github.csv. Pillar scores 2016-2024.
+# Also: Pillar 2.2 online access (ODIN openness, 2015-2024).
+# =====================================================================
+spi_raw <- read.csv("testing_functions_n_mods/optionB_testing/SPI_index_worldbank_github.csv",
+                    fileEncoding = "UTF-8-BOM") %>%
+  rename(country_code = iso3c, year = date)
+
+run_outcome <- function(var, label, pre, post, file) {
+  pan <- spi_raw %>% transmute(country_code, year, y = .data[[var]]) %>% filter(!is.na(y))
+  coh <- (min(pan$year) + pre):(max(pan$year) - post)
+  st  <- build_stack(pan, coh, pre, post)
+  es  <- run_event_study(st, pre, post, label)
+  plot_pair(raw_means(st, label), es, paste(label, "(0-100)"), label, file)
+  es
+}
+
+p2_es  <- run_outcome("SPI.INDEX.PIL2",   "Pillar 2 data services",       2, 3, "optionB_SPI_P2")
+p5_es  <- run_outcome("SPI.INDEX.PIL5",   "Pillar 5 data infrastructure", 2, 3, "optionB_SPI_P5")
+p22_es <- run_outcome("SPI.DIM2.2.INDEX", "Pillar 2.2 online access (ODIN)", 3, 3, "optionB_SPI_P2_2")
+
+# side-by-side plot of P2 vs P5
+both <- bind_rows(p2_es, p5_es)
+p_both <- ggplot(both, aes(event_time, est, colour = sample, fill = sample)) +
+  geom_hline(yintercept = 0, colour = "grey40") +
+  geom_vline(xintercept = -0.5, linetype = "dashed", colour = "grey50") +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.15, colour = NA) +
+  geom_line() + geom_point() +
+  labs(x = "Years since autocratization onset", y = "Difference vs controls (0-100)",
+       colour = NULL, fill = NULL,
+       title = sprintf("SPI Pillar 2 vs Pillar 5 (%d treated, %d controls; 95%% CI)",
+                       attr(p2_es, "n_treated"), attr(p2_es, "n_controls"))) +
+  theme_minimal() + theme(legend.position = "bottom")
+ggsave(file.path(out_dir, "optionB_SPI_P2_vs_P5.png"), p_both, width = 7, height = 4.5, dpi = 150)
+
+cat("\n=== Part C: Pillar 2 vs Pillar 5 ===\n"); summ(p2_es); summ(p5_es); summ(p22_es)
