@@ -348,3 +348,76 @@ write.csv(pt_tab, file.path(out_dir, "optionB_pretrend_tests.csv"), row.names = 
 cat("\n=== Part E: pre-trend tests ===\n"); print(pt_tab, row.names = FALSE)
 cat("\nLonger pre-period estimates:\n")
 print(es_long %>% select(sample, event_time, est, lo, hi) %>% mutate(across(c(est, lo, hi), ~round(.x, 2))), row.names = FALSE)
+
+# =====================================================================
+# PART F: SCI sub-dimensions, 2004-2020 (low/middle-income countries)
+# ---------------------------------------------------------------------
+# Longer-run version of the dissemination vs. other-capacity contrast.
+# SCI has three dimensions:
+#   IQ.SCI.PRDC = periodicity and timeliness (closest to dissemination)
+#   IQ.SCI.MTHD = statistical methodology (standards, classifications)
+#   IQ.SCI.SRCE = source data (censuses, surveys, vital registration)
+# =====================================================================
+sci_dims <- c(IQ.SCI.PRDC = "SCI: Periodicity & timeliness",
+              IQ.SCI.MTHD = "SCI: Methodology",
+              IQ.SCI.SRCE = "SCI: Source data",
+              IQ.SCI.OVRL = "SCI: Overall")
+sci_all <- read.csv("data/input_data/SCI_All_Dim_TS.csv", check.names = FALSE)
+
+sci_dim_es <- list(); sci_dim_raw <- list(); sci_dim_pt <- list()
+for (v in names(sci_dims)) {
+  pan <- sci_all %>% transmute(country_code, year = Year,
+                               y = suppressWarnings(as.numeric(.data[[v]]))) %>% filter(!is.na(y))
+  coh <- (min(pan$year) + PRE):(max(pan$year) - POST)
+  st  <- build_stack(pan, coh, PRE, POST)
+  sci_dim_es[[v]]  <- run_event_study(st, PRE, POST, sci_dims[[v]]) %>%
+    mutate(n_treated = n_distinct(st$country_code[st$treated == 1]),
+           n_controls = n_distinct(st$country_code[st$treated == 0]))
+  sci_dim_raw[[v]] <- raw_means(st, sci_dims[[v]])
+  sci_dim_pt[[v]]  <- pretest(pan, coh, PRE, POST, sci_dims[[v]])
+}
+sci_dim_es <- bind_rows(sci_dim_es) %>%
+  mutate(facet = sprintf("%s\n(%d treated, %d controls)", sample, n_treated, n_controls))
+sci_dim_raw <- bind_rows(sci_dim_raw); sci_dim_pt <- bind_rows(sci_dim_pt)
+
+p_sci_es <- ggplot(sci_dim_es, aes(event_time, est)) +
+  geom_hline(yintercept = 0, colour = "grey40") +
+  geom_vline(xintercept = -0.5, linetype = "dashed", colour = "grey50") +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.2) + geom_line() + geom_point() +
+  facet_wrap(~facet, ncol = 2) +
+  labs(x = "Years since autocratization onset", y = "Difference vs controls (0-100)",
+       title = "SCI dimensions around V-Dem autocratization onsets (2004-2020, 95% CI)",
+       subtitle = "Stacked event study; onset cohorts 2008-2017; low/middle-income countries") +
+  theme_minimal(base_size = 10)
+p_sci_raw <- ggplot(sci_dim_raw, aes(event_time, mean_y, colour = group)) +
+  geom_vline(xintercept = -0.5, linetype = "dashed", colour = "grey50") +
+  geom_line() + geom_point(size = 1.2) + facet_wrap(~sample, ncol = 2, scales = "free_y") +
+  labs(x = "Years since autocratization onset", y = "Average score (0-100)", colour = NULL,
+       title = "SCI dimensions: raw averages (parallel-trends check)") +
+  theme_minimal(base_size = 10) + theme(legend.position = "bottom")
+ggsave(file.path(out_dir, "optionB_SCI_dimensions_es.png"),  p_sci_es,  width = 9, height = 6.5, dpi = 150)
+ggsave(file.path(out_dir, "optionB_SCI_dimensions_raw.png"), p_sci_raw, width = 9, height = 6.5, dpi = 150)
+
+cat("\n=== Part F: SCI dimensions ===\n"); print(sci_dim_pt, row.names = FALSE)
+print(sci_dim_es %>% select(sample, event_time, est, lo, hi) %>% mutate(across(c(est, lo, hi), ~round(.x, 2))), row.names = FALSE)
+
+# =====================================================================
+# PART G: HRV transparency index (1993-2015, all income groups)
+# ---------------------------------------------------------------------
+# Dissemination proxy for the pre-2016 period (Hollyer, Rosendorff &
+# Vreeland; HRV2 update 2024). Download from QoG:
+#   https://datafinder.qog.gu.se/dataset/hrv  (variable hrv_index)
+# Save as testing_functions_n_mods/optionB_testing/hrv.csv with columns
+# ccodealp (ISO3), year, hrv_index. Skipped if the file is missing.
+# =====================================================================
+hrv_path <- "testing_functions_n_mods/optionB_testing/hrv.csv"
+if (file.exists(hrv_path)) {
+  hrv <- read.csv(hrv_path) %>% transmute(country_code = ccodealp, year, y = hrv_index) %>%
+    filter(!is.na(y), year >= 2000)
+  coh <- (min(hrv$year) + PRE):(max(hrv$year) - POST)
+  st  <- build_stack(hrv, coh, PRE, POST)
+  hrv_es <- run_event_study(st, PRE, POST, "HRV transparency index")
+  plot_pair(raw_means(st, "HRV transparency index"), hrv_es, "HRV index", "HRV", "optionB_HRV")
+  print(pretest(hrv, coh, PRE, POST, "HRV transparency index"), row.names = FALSE)
+  summ(hrv_es)
+} else message("hrv.csv not found: skipped Part G (see header for download).")
