@@ -285,3 +285,66 @@ write.csv(pillar_es, file.path(out_dir, "optionB_SPI_all_pillars.csv"), row.name
 cat("\n=== Part D: all pillars ===\n")
 print(pillar_es %>% select(sample, event_time, est, se, lo, hi) %>%
         mutate(across(c(est, se, lo, hi), ~round(.x, 2))), row.names = FALSE)
+
+# =====================================================================
+# PART E: parallel-trends checks for the five pillars
+# ---------------------------------------------------------------------
+# 1. Raw averages, treated vs controls, by event time (visual check)
+# 2. Pre-trend test: are the pre-onset coefficients jointly zero?
+#    (Wald test with country-clustered SEs)
+# 3. Longer pre-period: 3 years before onset (cohorts 2019-2021 only)
+# =====================================================================
+pretest <- function(pan, cohorts, pre, post, label) {
+  st <- build_stack(pan, cohorts, pre, post) %>% filter(!is.na(y))
+  ets <- setdiff(-pre:post, REF)
+  for (k in ets) st[[paste0("et_", ifelse(k < 0, paste0("m", abs(k)), k))]] <-
+    as.integer(st$treated == 1 & st$event_time == k)
+  etv <- grep("^et_", names(st), value = TRUE)
+  st$unit <- interaction(st$stack, st$country_code, drop = TRUE)
+  st$period <- interaction(st$stack, st$year, drop = TRUE)
+  m  <- lm(as.formula(paste("y ~", paste(etv, collapse = "+"), "+ factor(unit) + factor(period)")), data = st)
+  vc <- vcovCL(m, cluster = ~country_code)
+  leads <- grep("^et_m", etv, value = TRUE)
+  b <- coef(m)[leads]; V <- vc[leads, leads, drop = FALSE]
+  W <- as.numeric(t(b) %*% solve(V) %*% b)
+  data.frame(outcome = label, pre_years = pre,
+             n_treated = n_distinct(st$country_code[st$treated == 1]),
+             leads_tested = paste(sub("et_m", "-", leads), collapse = ","),
+             wald_chi2 = round(W, 2), df = length(leads),
+             p_value = round(pchisq(W, length(leads), lower.tail = FALSE), 3))
+}
+
+pt_tab <- list(); raw_all <- list(); es_long <- list()
+for (v in names(pillars)) {
+  pan <- spi_raw %>% transmute(country_code, year, y = .data[[v]]) %>% filter(!is.na(y), year >= 2016)
+  pt_tab[[v]] <- bind_rows(pretest(pan, 2018:2021, 2, 3, pillars[[v]]),
+                           pretest(pan, 2019:2021, 3, 3, pillars[[v]]))
+  raw_all[[v]] <- raw_means(build_stack(pan, 2018:2021, 2, 3), pillars[[v]])
+  es_long[[v]] <- run_event_study(build_stack(pan, 2019:2021, 3, 3), 3, 3, pillars[[v]])
+}
+pt_tab <- bind_rows(pt_tab); raw_all <- bind_rows(raw_all); es_long <- bind_rows(es_long)
+
+p_raw <- ggplot(raw_all, aes(event_time, mean_y, colour = group)) +
+  geom_vline(xintercept = -0.5, linetype = "dashed", colour = "grey50") +
+  geom_line() + geom_point(size = 1.2) +
+  facet_wrap(~sample, ncol = 3, scales = "free_y") +
+  labs(x = "Years since autocratization onset", y = "Average pillar score (0-100)", colour = NULL,
+       title = "Raw averages: autocratizing vs never-autocratizing countries",
+       subtitle = "Parallel trends: the two lines should move together before the dashed line") +
+  theme_minimal(base_size = 10) + theme(legend.position = "bottom")
+ggsave(file.path(out_dir, "optionB_SPI_all_pillars_raw.png"), p_raw, width = 10, height = 6.5, dpi = 150)
+
+p_long <- ggplot(es_long, aes(event_time, est)) +
+  geom_hline(yintercept = 0, colour = "grey40") +
+  geom_vline(xintercept = -0.5, linetype = "dashed", colour = "grey50") +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.2) + geom_line() + geom_point() +
+  facet_wrap(~sample, ncol = 3) +
+  labs(x = "Years since autocratization onset", y = "Difference vs controls (0-100)",
+       title = "Longer pre-period: 3 years before onset (cohorts 2019-2021)") +
+  theme_minimal(base_size = 10)
+ggsave(file.path(out_dir, "optionB_SPI_all_pillars_pre3.png"), p_long, width = 10, height = 6.5, dpi = 150)
+write.csv(pt_tab, file.path(out_dir, "optionB_pretrend_tests.csv"), row.names = FALSE)
+
+cat("\n=== Part E: pre-trend tests ===\n"); print(pt_tab, row.names = FALSE)
+cat("\nLonger pre-period estimates:\n")
+print(es_long %>% select(sample, event_time, est, lo, hi) %>% mutate(across(c(est, lo, hi), ~round(.x, 2))), row.names = FALSE)
