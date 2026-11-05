@@ -409,11 +409,13 @@ print(sci_dim_es %>% select(sample, event_time, est, lo, hi) %>% mutate(across(c
 #   https://datafinder.qog.gu.se/dataset/hrv  (variable hrv_index)
 # Save as testing_functions_n_mods/optionB_testing/hrv.csv with columns
 # ccodealp (ISO3), year, hrv_index. Skipped if the file is missing.
+# Current hrv.csv = HRV v1 (1980-2010, 125 countries) extracted from the
+# QoG Standard Time-Series dataset, Jan 2026 edition.
 # =====================================================================
 hrv_path <- "testing_functions_n_mods/optionB_testing/hrv.csv"
 if (file.exists(hrv_path)) {
   hrv <- read.csv(hrv_path) %>% transmute(country_code = ccodealp, year, y = hrv_index) %>%
-    filter(!is.na(y), year >= 2000)
+    filter(!is.na(y), year >= 1990)
   coh <- (min(hrv$year) + PRE):(max(hrv$year) - POST)
   st  <- build_stack(hrv, coh, PRE, POST)
   hrv_es <- run_event_study(st, PRE, POST, "HRV transparency index")
