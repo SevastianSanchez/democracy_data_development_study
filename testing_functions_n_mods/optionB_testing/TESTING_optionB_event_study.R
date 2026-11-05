@@ -423,3 +423,24 @@ if (file.exists(hrv_path)) {
   print(pretest(hrv, coh, PRE, POST, "HRV transparency index"), row.names = FALSE)
   summ(hrv_es)
 } else message("hrv.csv not found: skipped Part G (see header for download).")
+
+# =====================================================================
+# PART H: HRV2 (1980-2015, 149 countries; Hollyer, Ge, Rosendorff &
+# Vreeland 2024 update). Extracted from HRV2ExpandedCntriesExtracted.RData
+# (object TransparencyData) into hrv2.csv. Skipped if the file is missing.
+# =====================================================================
+hrv2_path <- "testing_functions_n_mods/optionB_testing/hrv2.csv"
+if (file.exists(hrv2_path)) {
+  hrv2 <- read.csv(hrv2_path) %>% transmute(country_code = ccodealp, year, y = hrv_index) %>%
+    filter(!is.na(y), year >= 1990)
+  coh2 <- (min(hrv2$year) + PRE):(max(hrv2$year) - POST)
+  st2  <- build_stack(hrv2, coh2, PRE, POST)
+  hrv2_es <- run_event_study(st2, PRE, POST, "HRV2 transparency index")
+  plot_pair(raw_means(st2, "HRV2 transparency index"), hrv2_es, "HRV2 index", "HRV2", "optionB_HRV2")
+  cat("\n=== Part H: HRV2 ===\n")
+  print(pretest(hrv2, coh2, PRE, POST, "HRV2 transparency index"), row.names = FALSE)
+  summ(hrv2_es)
+  # within-country year-to-year change SD, to read effect sizes
+  cat("Typical within-country yearly change (SD):",
+      round(mean(tapply(hrv2$y, hrv2$country_code, function(x) sd(diff(x))), na.rm = TRUE), 3), "\n")
+} else message("hrv2.csv not found: skipped Part H.")
