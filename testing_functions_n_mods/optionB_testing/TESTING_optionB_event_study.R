@@ -244,3 +244,44 @@ p_both <- ggplot(both, aes(event_time, est, colour = sample, fill = sample)) +
 ggsave(file.path(out_dir, "optionB_SPI_P2_vs_P5.png"), p_both, width = 7, height = 4.5, dpi = 150)
 
 cat("\n=== Part C: Pillar 2 vs Pillar 5 ===\n"); summ(p2_es); summ(p5_es); summ(p22_es)
+
+# =====================================================================
+# PART D: all five SPI pillars, same window and sample (2016-2024)
+# ---------------------------------------------------------------------
+# Same stacked design as Part C for every pillar, so the panels are
+# directly comparable. Pillars 1 and 3 exist back to 2004/2005 in the
+# World Bank file, but are restricted to 2016+ here on purpose.
+# =====================================================================
+pillars <- c(SPI.INDEX.PIL1 = "Pillar 1: Data use",
+             SPI.INDEX.PIL2 = "Pillar 2: Data services",
+             SPI.INDEX.PIL3 = "Pillar 3: Data products",
+             SPI.INDEX.PIL4 = "Pillar 4: Data sources",
+             SPI.INDEX.PIL5 = "Pillar 5: Data infrastructure")
+
+pillar_es <- bind_rows(lapply(names(pillars), function(v) {
+  pan <- spi_raw %>% transmute(country_code, year, y = .data[[v]]) %>%
+    filter(!is.na(y), year >= 2016)
+  st  <- build_stack(pan, 2018:2021, 2, 3)
+  es  <- run_event_study(st, 2, 3, pillars[[v]])
+  es$n_treated <- attr(es, "n_treated"); es$n_controls <- attr(es, "n_controls")
+  es
+})) %>%
+  mutate(facet = sprintf("%s\n(%d treated, %d controls)", sample, n_treated, n_controls))
+
+p_all <- ggplot(pillar_es, aes(event_time, est)) +
+  geom_hline(yintercept = 0, colour = "grey40") +
+  geom_vline(xintercept = -0.5, linetype = "dashed", colour = "grey50") +
+  geom_ribbon(aes(ymin = lo, ymax = hi), alpha = 0.2) +
+  geom_line() + geom_point() +
+  facet_wrap(~facet, ncol = 3) +
+  labs(x = "Years since autocratization onset",
+       y = "Difference vs never-autocratizing countries (0-100)",
+       title = "SPI pillars around V-Dem autocratization onsets (stacked event study, 95% CI)",
+       subtitle = "SPI 2016-2024; onset cohorts 2018-2021; reference year = -1; SEs clustered by country") +
+  theme_minimal(base_size = 10)
+ggsave(file.path(out_dir, "optionB_SPI_all_pillars.png"), p_all, width = 10, height = 6.5, dpi = 150)
+write.csv(pillar_es, file.path(out_dir, "optionB_SPI_all_pillars.csv"), row.names = FALSE)
+
+cat("\n=== Part D: all pillars ===\n")
+print(pillar_es %>% select(sample, event_time, est, se, lo, hi) %>%
+        mutate(across(c(est, se, lo, hi), ~round(.x, 2))), row.names = FALSE)
