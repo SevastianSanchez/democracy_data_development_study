@@ -1,10 +1,20 @@
 # Coverage, inputs and overlap of the extended Unified Democracy Scores (democracyData::extended_uds)
-# against the EIU baseline (di_score) in panel_data.csv. Run from the repo root.
-# Result (2026-11-18): UDS runs 1502-2025; 159 countries x 8 yrs = 1272 matched country-years;
-# EIU is an input in 100% of them; r = 0.95 pooled, 0.72 within-country, 0.50 on annual changes.
+# against the EIU baseline (di_score). Run from the repo root.
+#
+# The panel is built by Comp2_panel_wrangling.R (the single source of panel_data), and the
+# comparison is restricted to the Table 1 estimation sample: country-years with spi_comp,
+# di_score and log_gdppc all observed (TWFE contemporaneous model: N = 1,234, 155 countries).
+# An earlier version read data/output_datasets/panel_data.csv, a stale 167-country copy that
+# has since been removed; its results (159 countries, 1,272 country-years) are superseded.
+#
+# Result (2026-11-18, estimation sample): UDS matches all 155 countries / 1,234 country-years;
+# EIU is a UDS input in 100% of them; r = 0.951 pooled, 0.719 within-country, 0.50 on annual changes.
 
 if (requireNamespace("democracyData", quietly=TRUE)) extended_uds <- democracyData::extended_uds else { tf <- tempfile(fileext=".rda"); download.file("https://raw.githubusercontent.com/xmarquez/democracyData/master/data/extended_uds.rda", tf, mode="wb"); load(tf) }; u <- as.data.frame(extended_uds[extended_uds$year>=2016 & extended_uds$year<=2023, c("extended_country_name","GWn","year","z1","num_measures","measures")])
-p <- read.csv("data/output_datasets/panel_data.csv")
+source("Comp2_panel_wrangling.R")  # builds panel_data in memory
+p <- as.data.frame(panel_data)
+p <- p[!is.na(p$spi_comp) & !is.na(p$di_score) & !is.na(p$log_gdppc), ]  # Table 1 estimation sample
+cat("estimation sample:", nrow(p), "country-years,", length(unique(p$country_code)), "countries\n")
 pc <- unique(p[,c("country_name","country_code")])
 norm <- function(x) gsub("[^a-z]","",iconv(tolower(gsub("\\s*\\(.*\\)","",x)),to="ASCII//TRANSLIT"))
 un <- unique(u$extended_country_name)
