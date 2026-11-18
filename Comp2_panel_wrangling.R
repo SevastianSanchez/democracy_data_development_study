@@ -1,3 +1,8 @@
+# SINGLE SOURCE OF panel_data.
+# Every analysis should get panel_data by running source("Comp2_panel_wrangling.R").
+# Do not save or read a CSV copy of panel_data: a saved copy (data/output_datasets/panel_data.csv)
+# went stale (167 countries vs. 162 here, 155 in the models) and was removed on 2026-11-18.
+
 # load libraries/packages
 source("packages.R")
 
@@ -127,8 +132,7 @@ panel_data <- panel_data %>%
          di_reg_cat, log_gdppc, income_level_recoded, p1_use:p5_infra, 
          goal1:goal17, everything())
 
-# Optional: Save to CSV (uncommented when needed)
-# write_csv(panel_data, "data/Main CSV Outputs/panel_data.csv")
+# No CSV copy is saved on purpose (see note at top of file).
 
 # remove selected_df to free up memory
 rm(selected_df)
